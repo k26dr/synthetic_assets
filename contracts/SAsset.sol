@@ -16,14 +16,12 @@ contract SAsset {
         uint amount; // of asset
     }
 
-    Order[] buyOrders;
-    Order[] sellOrders;
-    uint buySum;
-    uint sellSum;
-
-    //mapping(uint => Order[]) orders;
-    //mapping(uint => uint) ordersSum;
-
+    mapping(uint => Order) bids;
+    mapping(uint => Order) asks;
+    uint bidPointer;
+    uint askPointer;
+    uint bidDepth = 0;
+    uint askDepth = 0;
 
     enum OrderType { Buy, Sell }
     event Fill(OrderType orderType, address user, uint amount);
@@ -38,6 +36,8 @@ contract SAsset {
     }
 
     function buy() payable returns (bool ok) {
+        if (outstandingSells == 0)
+            
         uint amount = msg.value * 1e6 / price;
         Order memory order = Order(msg.sender, amount);
         buyOrders.push(order);
