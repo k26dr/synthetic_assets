@@ -1,5 +1,8 @@
 var fs = require('fs');
-var Migrations = artifacts.require("./Migrations.sol");
+const SAsset = artifacts.require('./SAsset.sol');
+
+var account = web3.eth.accounts[0];
+var oracle = "0x58E813a165687301E76606Cf912fA4d0bdcc6727";
 
 function cd_project_root() {
     while (!fs.existsSync('truffle.js'))
@@ -13,9 +16,13 @@ function unlock(wallet) {
     web3.personal.unlockAccount(wallet, password)
 }
 
-module.exports = function(deployer, network) {
-    if (network == "rinkeby" || network == "mainnet")
-        unlock(web3.eth.accounts[0])
+module.exports = function (deployer, network) {
+    cd_project_root();
 
-    deployer.deploy(Migrations);
-};
+    if (network == "rinkeby" || network == "mainnet")
+        unlock(account);
+
+    deployer.deploy(SAsset, "Synethetic USD", "SUSD", 347e6, 1e12, oracle);
+    
+}
+
