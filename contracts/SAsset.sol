@@ -2,14 +2,15 @@ pragma solidity ^0.4.15;
 
 contract SAsset {
     address public oracle;
-    uint public totalSupply; // in ppm-USD (1e-6 USD)
-    uint public price; // in ppm-USD (1e-6 USD)
+    uint public totalSupply; // in ppm-asset (1e-6 of asset)
+    uint public price; // in wei per ppm-asset
 
     mapping(address => uint) balances;
     mapping(address => uint) etherBalances;
 
     string public name;
     string public symbol;
+    uint public decimals = 6;
 
     struct Order {
         address user;
@@ -18,15 +19,12 @@ contract SAsset {
 
     Order[] buyOrders;
     Order[] sellOrders;
-    uint buySum;
-    uint sellSum;
-
-    //mapping(uint => Order[]) orders;
-    //mapping(uint => uint) ordersSum;
-
+    uint public buySum;
+    uint public sellSum;
 
     enum OrderType { Buy, Sell }
     event Fill(OrderType orderType, address user, uint amount);
+
 
     function SAsset(string _name, string _symbol, uint _price, uint _totalSupply, address _oracle) {
         name = _name;
@@ -37,14 +35,16 @@ contract SAsset {
         balances[msg.sender] = _totalSupply;
     }
 
+
     function buy() payable returns (bool ok) {
-        uint amount = msg.value * 1e6 / price;
+        uint amount = msg.value / price;
         Order memory order = Order(msg.sender, amount);
         buyOrders.push(order);
         buySum += amount;
         return true;
     }
 
+    // @param amount - asset to buy in ppm-asset
     function sell(uint amount) returns (bool ok) {
         require(balances[msg.sender] >= amount);
         Order memory order = Order(msg.sender, amount);
@@ -78,7 +78,7 @@ contract SAsset {
 
                 // issue refunds for outstanding orders
                 uint remainingAmount = order.amount - amount;
-                uint refund = remainingAmount * price / 1e6;
+                uint refund = remainingAmount * price;
                 etherBalances[order.user] += refund;
             }
             else
@@ -105,7 +105,7 @@ contract SAsset {
             Fill(OrderType.Sell, order.user, amount);
 
             // credit account
-            uint saleEther = amount * price / 1e6;
+            uint saleEther = amount * price;
             etherBalances[order.user] += saleEther;
             
             counter += amount;
@@ -119,12 +119,18 @@ contract SAsset {
         sellSum = 0;
     }
 
-    function balanceOf(address _owner) constant returns (uint balance) {
-        return balances[_owner];
+    function balanceOf(address who) constant returns (uint) {
+        return balances[who];
     }
 
-    function etherBalanceOf(address _owner) constant returns (uint balance) {
-        return etherBalances[_owner];
+    function etherBalanceOf(address user) constant returns (uint balance) {
+        return etherBalances[user];
+    }
+
+    function withdraw() {
+        uint amount = etherBalances[msg.sender];
+        etherBalances[msg.sender] = 0;
+        msg.sender.transfer(amount);
     }
 
     // Fallback/Default
